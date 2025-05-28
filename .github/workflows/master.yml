@@ -1,0 +1,38 @@
+name: deploy to kafka broker
+
+on:
+  # master 브랜치에 push 발생 시 실행
+  push:
+    branches: [ master ]
+
+  # 수동 실행도 허용
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout release
+      uses: actions/checkout@v4
+
+    - name: archive to tar.gz
+      run: tar cvfz ./kafka-producer.tar.gz *
+
+    - name: AWS configure credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET_KEY }}
+        aws-region: ap-southeast-2
+
+    - name: upload to S3
+      run: aws s3 cp --region ap-southeast-2 ./kafka-producer.tar.gz s3://datalake-actions-deploy-youngwoo/kafka-producer/kafka-producer.tar.gz
+
+    - name: deploy with AWS CodeDeploy
+      run: |
+        aws deploy create-deployment \
+          --application-name datalake-deploy \
+          --deployment-group-name kafka-deploy \
+          --s3-location bucket=datalake-actions-deploy-youngwoo,bundleType=tgz,key=kafka-producer/kafka-producer.tar.gz \
+          --region ap-southeast-2
