@@ -1,3 +1,4 @@
+#왜 안나오는가
 class RealtimeBicycle:
 
     def __init__(self):
